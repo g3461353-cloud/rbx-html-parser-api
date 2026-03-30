@@ -1,35 +1,48 @@
 const express = require('express');
+const { JSDOM } = require('jsdom');
+const { createCanvas } = require('canvas');
 const app = express();
 
-// Aumentamos o limite para suportar o envio de muitos pixels de uma vez
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '10mb' }));
 
-let frameAtual = []; // Armazena o último quadro de pixels recebido
+let pixelsGlobais = [];
 
-// Rota para o seu script (Python/PC) enviar os pixels processados
-app.post('/enviar-frame', (req, res) => {
-    if (req.body.pixels && Array.isArray(req.body.pixels)) {
-        frameAtual = req.body.pixels;
-        console.log(`Frame recebido: ${frameAtual.length} pixels.`);
-        return res.json({ sucesso: true, mensagem: "Frame atualizado!" });
-    }
-    res.status(400).json({ sucesso: false, mensagem: "Formato de pixels inválido." });
+app.post('/processar', (req, res) => {
+    const { html } = req.body;
+
+    // Cria um DOM virtual leve
+    const dom = new JSDOM(html, { runScripts: "dangerously", resources: "usable" });
+    const { window } = dom;
+
+    // Tenta capturar o Canvas que o jogo do Flappy Bird cria
+    setTimeout(() => {
+        try {
+            const canvasJogo = window.document.getElementById('application-canvas');
+            if (canvasJogo) {
+                const ctx = canvasJogo.getContext('2d');
+                const largura = 50; 
+                const altura = 50;
+                
+                // Extrai os dados de imagem
+                const imageData = ctx.getImageData(0, 0, largura, altura).data;
+                let pixels = [];
+                
+                for (let i = 0; i < imageData.length; i += 4) {
+                    pixels.push([imageData[i], imageData[i+1], imageData[i+2]]);
+                }
+                pixelsGlobais = pixels;
+                res.json({ sucesso: true, msg: "Pixels capturados" });
+            } else {
+                res.json({ sucesso: false, msg: "Canvas não encontrado no HTML" });
+            }
+        } catch (e) {
+            res.status(500).json({ erro: e.message });
+        }
+    }, 1000); // Espera 1 segundo para o JS do jogo "montar" o frame
 });
 
-// Rota que o Roblox vai chamar para pegar os pixels e desenhar
-app.get('/receber-frame', (req, res) => {
-    res.json({
-        pixels: frameAtual,
-        total: frameAtual.length
-    });
+app.get('/render', (req, res) => {
+    res.json(pixelsGlobais);
 });
 
-// Rota de teste simples
-app.get('/', (req, res) => {
-    res.send("API de Transmissão Roblox está Online!");
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-});
+app.listen(process.env.PORT || 3000, () => console.log("API Rodando"));
