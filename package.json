@@ -1,13 +1,25 @@
 {
-  "name": "roblox-playcanvas-api",
+  "name": "roblox-pixel-bridge",
   "version": "1.0.0",
+  "description": "API para renderização de lógica JS/CSS em pixels para o Roblox",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
+  "keywords": [
+    "roblox",
+    "render",
+    "canvas",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "canvas": "^2.11.2",
-    "express": "^4.18.2",
-    "jsdom": "^22.1.0"
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }
