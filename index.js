@@ -3,54 +3,53 @@ const { createCanvas } = require('canvas');
 const { JSDOM, ResourceLoader } = require('jsdom');
 const app = express();
 
-const WIDTH = 32; 
+// Configurações fixas para economizar memória
+const WIDTH = 32;
 const HEIGHT = 32;
+const canvas = createCanvas(WIDTH, HEIGHT);
+const ctx = canvas.getContext('2d', { alpha: false }); // Desativa alpha para ganhar performance
 
-let systemLogs = {
-    status: "Inicializando scripts...",
-    progress: 0,
-    engineActive: false,
-    filesLoaded: 0,
-    totalFiles: 4, // playcanvas, game-scripts, start, loading
-    error: "Nenhum"
-};
+let status = { prog: 0, active: false };
 
-const serverCanvas = createCanvas(WIDTH, HEIGHT);
-const serverCtx = serverCanvas.getContext('2d');
-
-class QuickLoader extends ResourceLoader {
+// Loader otimizado: ignora CSS e Imagens pesadas, foca apenas nos Scripts
+class LightLoader extends ResourceLoader {
     fetch(url, options) {
+        if (url.endsWith('.css') || url.endsWith('.png') || url.endsWith('.jpg')) {
+            return Promise.resolve(Buffer.from("")); 
+        }
         return super.fetch(url, options).then(res => {
-            systemLogs.filesLoaded++;
-            systemLogs.progress = Math.floor((systemLogs.filesLoaded / systemLogs.totalFiles) * 100);
+            status.prog += 25; // Simulação de progresso simples
             return res;
         });
     }
 }
 
 const dom = new JSDOM(`<!DOCTYPE html><html><body><canvas id="application-canvas"></canvas></body></html>`, {
-    runScripts: "dangerously", // Permite execução imediata
-    resources: new QuickLoader(),
-    pretendToBeVisual: true
+    runScripts: "dangerously",
+    resources: new LightLoader(),
+    pretendToBeVisual: false // Desligar visual ajuda a poupar RAM
 });
 
-const { window } = dom;
-
-// Mock de WebGL para Canvas 2D
-window.HTMLCanvasElement.prototype.getContext = function(type) {
-    systemLogs.engineActive = true;
-    systemLogs.status = "Motor Rodando";
-    return serverCtx;
+// Mock de WebGL ultra-rápido
+dom.window.HTMLCanvasElement.prototype.getContext = (type) => {
+    status.active = true;
+    return ctx;
 };
 
-// Rota de Renderização
 app.get('/render', (req, res) => {
-    const imageData = serverCtx.getImageData(0, 0, WIDTH, HEIGHT).data;
-    const pixels = Array.from(imageData).filter((_, i) => (i + 1) % 4 !== 0);
+    // Extração direta para Uint8ClampedArray (mais rápido que Array comum)
+    const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT).data;
+    const pixels = new Uint8Array(WIDTH * HEIGHT * 3);
+    
+    for (let i = 0, j = 0; i < imgData.length; i += 4, j += 3) {
+        pixels[j] = imgData[i];     // R
+        pixels[j+1] = imgData[i+1]; // G
+        pixels[j+2] = imgData[i+2]; // B
+    }
 
     res.json({
-        data: pixels,
-        logs: systemLogs
+        d: Array.from(pixels), // Envia com chaves curtas para diminuir o tamanho do JSON
+        s: status
     });
 });
 
