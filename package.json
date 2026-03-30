@@ -1,13 +1,13 @@
 {
-  "name": "roblox-html-parser-api",
+  "name": "roblox-webgl-api",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
   "dependencies": {
     "canvas": "^2.11.2",
     "express": "^4.18.2",
     "jsdom": "^22.1.0"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
