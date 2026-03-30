@@ -1,12 +1,12 @@
 {
   "name": "rbx-html-parser-api",
   "version": "1.0.0",
-  "description": "API para integração com Roblox",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "puppeteer": "^21.0.0"
   }
 }
