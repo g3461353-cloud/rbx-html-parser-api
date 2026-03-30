@@ -1,12 +1,12 @@
 {
   "name": "rbx-html-parser-api",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "description": "API Leve para Transmissão de Pixels",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "puppeteer": "^21.0.0"
+    "express": "^4.18.2"
   }
 }
