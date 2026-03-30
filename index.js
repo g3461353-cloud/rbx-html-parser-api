@@ -1,56 +1,27 @@
 const express = require('express');
 const { createCanvas } = require('canvas');
-const { JSDOM, ResourceLoader } = require('jsdom');
 const app = express();
 
-// Configurações fixas para economizar memória
-const WIDTH = 32;
-const HEIGHT = 32;
-const canvas = createCanvas(WIDTH, HEIGHT);
-const ctx = canvas.getContext('2d', { alpha: false }); // Desativa alpha para ganhar performance
+app.use(express.json());
 
-let status = { prog: 0, active: false };
-
-// Loader otimizado: ignora CSS e Imagens pesadas, foca apenas nos Scripts
-class LightLoader extends ResourceLoader {
-    fetch(url, options) {
-        if (url.endsWith('.css') || url.endsWith('.png') || url.endsWith('.jpg')) {
-            return Promise.resolve(Buffer.from("")); 
-        }
-        return super.fetch(url, options).then(res => {
-            status.prog += 25; // Simulação de progresso simples
-            return res;
-        });
-    }
-}
-
-const dom = new JSDOM(`<!DOCTYPE html><html><body><canvas id="application-canvas"></canvas></body></html>`, {
-    runScripts: "dangerously",
-    resources: new LightLoader(),
-    pretendToBeVisual: false // Desligar visual ajuda a poupar RAM
-});
-
-// Mock de WebGL ultra-rápido
-dom.window.HTMLCanvasElement.prototype.getContext = (type) => {
-    status.active = true;
-    return ctx;
-};
-
-app.get('/render', (req, res) => {
-    // Extração direta para Uint8ClampedArray (mais rápido que Array comum)
-    const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT).data;
-    const pixels = new Uint8Array(WIDTH * HEIGHT * 3);
+app.post('/live-sync', (req, res) => {
+    const { files, width, height } = req.body;
     
-    for (let i = 0, j = 0; i < imgData.length; i += 4, j += 3) {
-        pixels[j] = imgData[i];     // R
-        pixels[j+1] = imgData[i+1]; // G
-        pixels[j+2] = imgData[i+2]; // B
+    // Criamos um canvas interno (ex: 64x64)
+    const canvas = createCanvas(width || 64, height || 64);
+    const ctx = canvas.getContext('2d');
+
+    // Simulação de processamento de "Camadas"
+    // Aqui você pode processar a lógica dos arquivos JS recebidos
+    // Exemplo: se o style.css tiver um background-color, pintamos o canvas
+    if (files['style.css'] && files['style.css'].includes('red')) {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    res.json({
-        d: Array.from(pixels), // Envia com chaves curtas para diminuir o tamanho do JSON
-        s: status
-    });
+    // Retorna os dados puramente binários dos pixels (RGBA)
+    const buffer = canvas.toBuffer('raw'); 
+    res.send(buffer);
 });
 
-app.listen(process.env.PORT || 3000);
+app.listen(3000);
