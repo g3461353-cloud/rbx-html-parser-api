@@ -1,19 +1,13 @@
 {
-  "name": "roblox-canvas-streamer",
+  "name": "roblox-html-parser-api",
   "version": "1.0.0",
-  "description": "API para streaming de pixels do Canvas para o Roblox",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "canvas": "^2.11.2",
-    "express": "^4.18.2"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "author": "",
-  "license": "ISC"
+    "express": "^4.18.2",
+    "jsdom": "^22.1.0"
+  }
 }
