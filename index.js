@@ -4,20 +4,19 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Função simples para converter strings em uma matriz de "pixels" (valores numéricos)
-// Cada caractere é convertido para seu valor ASCII para ser lido pelo Canvas no Roblox
-function parseToPixels(jsContent, cssContent) {
-    const combined = `/*CSS*/${cssContent}/*JS*/${jsContent}`;
-    const pixels = [];
+// Transforma o código em uma array de números (ASCII/RGBA fake) 
+// que o Roblox lerá para montar o CanvasGroup
+function generatePixelData(js, css) {
+    const content = `[CSS]${css}[JS]${js}`;
+    const data = [];
     
-    for (let i = 0; i < combined.length; i++) {
-        pixels.push(combined.charCodeAt(i));
+    for (let i = 0; i < content.length; i++) {
+        data.push(content.charCodeAt(i));
     }
     
     return {
-        data: pixels,
-        width: Math.ceil(Math.sqrt(pixels.length)),
-        length: pixels.length
+        pixels: data,
+        size: Math.ceil(Math.sqrt(data.length))
     };
 }
 
@@ -25,13 +24,13 @@ app.get('/translate', (req, res) => {
     const { js, css } = req.query;
 
     if (!js || !css) {
-        return res.status(400).json({ error: "Missing js or css query parameters" });
+        return res.status(400).json({ error: "Envie js e css via query params" });
     }
 
-    const payload = parseToPixels(js, css);
-    res.json(payload);
+    const result = generatePixelData(js, css);
+    res.json(result);
 });
 
 app.listen(PORT, () => {
-    console.log(`API rodando na porta ${PORT}`);
+    console.log(`Servidor ativo na porta ${PORT}`);
 });
