@@ -1,43 +1,42 @@
 const express = require('express');
+const { createCanvas } = require('canvas');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Um mapa de bits 3x5 simplificado para números (0-9) e ":"
-const FONT = {
-    '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
-    '1': [[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
-    '2': [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
-    '3': [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
-    '4': [[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
-    '5': [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
-    '6': [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
-    '7': [[1,1,1],[0,0,1],[0,1,0],[0,1,0],[0,1,0]],
-    '8': [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
-    '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
-    ':': [[0,0,0],[0,1,0],[0,0,0],[0,1,0],[0,0,0]],
-    ' ': [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
-};
-
 app.get('/translate', (req, res) => {
-    // Simulando o tempo do timer (ex: 00:59)
-    const text = req.query.text || "00:59"; 
-    const grid = [[],[],[],[],[]]; // 5 linhas de altura
+    const text = req.query.text || "00:00:00";
+    
+    // Criamos um canvas pequeno para economizar banda (ex: 80x20 pixels)
+    const width = 100;
+    const height = 30;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
 
-    // Desenha cada caractere na grade
-    for (let char of text) {
-        const bitmap = FONT[char] || FONT[' '];
-        for (let row = 0; row < 5; row++) {
-            grid[row].push(...bitmap[row], 0); // Adiciona o caractere + 1 espaço vazio
-        }
+    // Fundo preto e texto verde neon (estilo Matrix/Timer)
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, width, height);
+    
+    ctx.fillStyle = "#00FF41";
+    ctx.font = "bold 16px Courier New";
+    ctx.textAlign = "center";
+    ctx.fillText(text, width / 2, height / 1.5);
+
+    // Pegamos os dados de imagem (RGBA)
+    const imageData = ctx.getImageData(0, 0, width, height).data;
+    const pixelData = [];
+
+    // Otimização: Pegamos apenas o canal Green (verde) ou Alpha para reduzir o JSON
+    for (let i = 0; i < imageData.length; i += 4) {
+        // Se o pixel for brilhante o suficiente, marcamos como 1
+        const brightness = imageData[i + 1]; // Canal Verde
+        pixelData.push(brightness > 100 ? 1 : 0);
     }
 
-    // Achata a grade em uma lista simples de pixels (0 ou 1)
-    const flatPixels = grid.flat();
     res.json({
-        pixels: flatPixels,
-        cols: grid[0].length,
-        rows: 5
+        pixels: pixelData,
+        width: width,
+        height: height
     });
 });
 
-app.listen(PORT, () => console.log("API Online"));
+app.listen(PORT, () => console.log("API com Canvas Engine Online"));
