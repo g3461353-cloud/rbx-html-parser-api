@@ -1,28 +1,37 @@
-const express = require('express'); // 1. Importa o módulo
-const { createCanvas } = require('canvas');
-const app = express(); // 2. CRIA a instância do app (O erro está aqui!)
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-app.post('/live-sync', (req, res) => {
-    const { width = 32, height = 32 } = req.body;
+// Função simples para converter strings em uma matriz de "pixels" (valores numéricos)
+// Cada caractere é convertido para seu valor ASCII para ser lido pelo Canvas no Roblox
+function parseToPixels(jsContent, cssContent) {
+    const combined = `/*CSS*/${cssContent}/*JS*/${jsContent}`;
+    const pixels = [];
     
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-
-    // TESTE: Pinta o fundo de verde e um quadrado central
-    ctx.fillStyle = '#00ff00'; 
-    ctx.fillRect(0, 0, width, height);
+    for (let i = 0; i < combined.length; i++) {
+        pixels.push(combined.charCodeAt(i));
+    }
     
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(10, 10, 12, 12);
+    return {
+        data: pixels,
+        width: Math.ceil(Math.sqrt(pixels.length)),
+        length: pixels.length
+    };
+}
 
-    // Retorna o buffer bruto (RGBA)
-    const buffer = canvas.toBuffer('raw');
-    res.send(buffer);
+app.get('/translate', (req, res) => {
+    const { js, css } = req.query;
+
+    if (!js || !css) {
+        return res.status(400).json({ error: "Missing js or css query parameters" });
+    }
+
+    const payload = parseToPixels(js, css);
+    res.json(payload);
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`API rodando na porta ${PORT}`);
 });
