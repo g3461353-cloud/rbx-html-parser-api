@@ -2,35 +2,42 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-
-// Transforma o código em uma array de números (ASCII/RGBA fake) 
-// que o Roblox lerá para montar o CanvasGroup
-function generatePixelData(js, css) {
-    const content = `[CSS]${css}[JS]${js}`;
-    const data = [];
-    
-    for (let i = 0; i < content.length; i++) {
-        data.push(content.charCodeAt(i));
-    }
-    
-    return {
-        pixels: data,
-        size: Math.ceil(Math.sqrt(data.length))
-    };
-}
+// Um mapa de bits 3x5 simplificado para números (0-9) e ":"
+const FONT = {
+    '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+    '1': [[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
+    '2': [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
+    '3': [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
+    '4': [[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
+    '5': [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+    '6': [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
+    '7': [[1,1,1],[0,0,1],[0,1,0],[0,1,0],[0,1,0]],
+    '8': [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
+    '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
+    ':': [[0,0,0],[0,1,0],[0,0,0],[0,1,0],[0,0,0]],
+    ' ': [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
+};
 
 app.get('/translate', (req, res) => {
-    const { js, css } = req.query;
+    // Simulando o tempo do timer (ex: 00:59)
+    const text = req.query.text || "00:59"; 
+    const grid = [[],[],[],[],[]]; // 5 linhas de altura
 
-    if (!js || !css) {
-        return res.status(400).json({ error: "Envie js e css via query params" });
+    // Desenha cada caractere na grade
+    for (let char of text) {
+        const bitmap = FONT[char] || FONT[' '];
+        for (let row = 0; row < 5; row++) {
+            grid[row].push(...bitmap[row], 0); // Adiciona o caractere + 1 espaço vazio
+        }
     }
 
-    const result = generatePixelData(js, css);
-    res.json(result);
+    // Achata a grade em uma lista simples de pixels (0 ou 1)
+    const flatPixels = grid.flat();
+    res.json({
+        pixels: flatPixels,
+        cols: grid[0].length,
+        rows: 5
+    });
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor ativo na porta ${PORT}`);
-});
+app.listen(PORT, () => console.log("API Online"));
