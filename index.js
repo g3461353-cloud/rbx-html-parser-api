@@ -1,42 +1,52 @@
-const express = require('express');
-const { createCanvas } = require('canvas');
+import express from 'express';
+import pkg from 'canvas';
+const { createCanvas } = pkg;
+
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.get('/translate', (req, res) => {
-    const text = req.query.text || "00:00:00";
-    
-    // Criamos um canvas pequeno para economizar banda (ex: 80x20 pixels)
-    const width = 100;
-    const height = 30;
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+// Aumentando o limite do JSON pois o array de pixels é pesado
+app.use(express.json({ limit: '10mb' }));
 
-    // Fundo preto e texto verde neon (estilo Matrix/Timer)
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, width, height);
-    
-    ctx.fillStyle = "#00FF41";
-    ctx.font = "bold 16px Courier New";
-    ctx.textAlign = "center";
-    ctx.fillText(text, width / 2, height / 1.5);
+const WIDTH = 256;
+const HEIGHT = 256;
 
-    // Pegamos os dados de imagem (RGBA)
-    const imageData = ctx.getImageData(0, 0, width, height).data;
-    const pixelData = [];
+app.post('/render', (req, res) => {
+    try {
+        const { html_content, color } = req.body;
 
-    // Otimização: Pegamos apenas o canal Green (verde) ou Alpha para reduzir o JSON
-    for (let i = 0; i < imageData.length; i += 4) {
-        // Se o pixel for brilhante o suficiente, marcamos como 1
-        const brightness = imageData[i + 1]; // Canal Verde
-        pixelData.push(brightness > 100 ? 1 : 0);
+        const canvas = createCanvas(WIDTH, HEIGHT);
+        const ctx = canvas.getContext('2d');
+
+        // Limpa o canvas (Fundo transparente ou sólido)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        // Renderização Simples (Simulando o HTML)
+        ctx.fillStyle = color || '#ff0000';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(html_content || 'Roblox Engine', WIDTH / 2, HEIGHT / 2);
+
+        // Extrai os pixels brutos (RGBA)
+        const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+        
+        // O Roblox espera uma tabela de números. 
+        // O Uint8ClampedArray do JS é perfeito para isso.
+        const pixelArray = Array.from(imageData.data);
+
+        res.status(200).json({
+            success: true,
+            width: WIDTH,
+            height: HEIGHT,
+            pixels: pixelArray
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
-
-    res.json({
-        pixels: pixelData,
-        width: width,
-        height: height
-    });
 });
 
-app.listen(PORT, () => console.log("API com Canvas Engine Online"));
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 API rodando em http://localhost:${PORT}`);
+    console.log(`Dica: No Roblox, use HttpService para postar em seu IP/render`);
+});
