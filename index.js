@@ -1,48 +1,52 @@
 import express from 'express';
-import pkg from 'canvas';
-const { createCanvas } = pkg;
 
 const app = express();
+app.use(express.json());
 
-// Aumenta o limite para aguentar o envio de pixels do Roblox
-app.use(express.json({ limit: '20mb' }));
-
-const WIDTH = 256;
-const HEIGHT = 256;
+// VARIÁVEL DE PIXELIZAÇÃO: 
+// Quanto maior o número, mais "quadradão" e leve fica. 
+// 1 = Resolução máxima (pesado), 10 = Bem pixelado (leve).
+const PIXEL_GRID = 5; 
 
 app.post('/render', (req, res) => {
     try {
-        const { html_content, color } = req.body;
+        const { html_content } = req.body;
+        
+        // O "Tradutor": Em vez de bitmap, mandamos comandos de desenho
+        const ui_commands = [];
 
-        const canvas = createCanvas(WIDTH, HEIGHT);
-        const ctx = canvas.getContext('2d');
+        // Exemplo de lógica: se encontrar H1, cria um comando de texto
+        if (html_content.includes('<h1>')) {
+            const cleanText = html_content.replace(/<[^>]*>/g, '');
+            ui_commands.push({
+                type: "Text",
+                content: cleanText,
+                size: [1, 0, 0.3, 0],
+                pos: [0, 0, 0.1, 0],
+                color: "#FFFFFF"
+            });
+        }
 
-        // Fundo Branco
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        // Fundo padrão
+        ui_commands.push({
+            type: "Rect",
+            color: "#222222",
+            size: [1, 0, 1, 0],
+            pos: [0, 0, 0, 0],
+            zIndex: 0
+        });
 
-        // Desenho Simples (Simulando Render de HTML)
-        ctx.fillStyle = color || '#000000';
-        ctx.font = '22px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(html_content || 'Renderizado via API', WIDTH / 2, HEIGHT / 2);
-
-        // Extração de pixels RGBA
-        const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
-        const pixelArray = Array.from(imageData.data);
-
-        res.json({
-            width: WIDTH,
-            height: HEIGHT,
-            pixels: pixelArray
+        res.json({ 
+            success: true, 
+            grid_scale: PIXEL_GRID, 
+            commands: ui_commands 
         });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// O Render exige que a porta seja dinâmica via process.env.PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Servidor pronto na porta ${PORT}`);
+    console.log(`API Online na porta ${PORT} com GRID ${PIXEL_GRID}`);
 });
