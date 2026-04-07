@@ -1,34 +1,57 @@
 import express from 'express';
-import nodeHtmlToImage from 'node-html-to-image';
 
 const app = express();
 app.use(express.json());
 
-app.post('/render', async (req, res) => {
-    const { html_content } = req.body;
-
+app.post('/render', (req, res) => {
     try {
-        // Aqui a API executa o HTML de verdade e gera uma imagem (Buffer)
-        const image = await nodeHtmlToImage({
-            html: `<html><body style="width: 400px; height: 400px; margin:0; padding:20px; background-color: #1a1a1a; color: white; font-family: Arial;">
-                    ${html_content}
-                   </body></html>`,
-            quality: 80,
-            type: 'png'
+        const { html_content } = req.body;
+        const commands = [];
+
+        // Tradutor Automático Simples
+        // Procura por H1
+        if (html_content.includes('<h1>')) {
+            const match = html_content.match(/<h1>(.*?)<\/h1>/);
+            if (match) {
+                commands.push({
+                    type: "Text",
+                    content: match[1],
+                    size: [0.9, 0, 0.2, 0],
+                    pos: [0.05, 0, 0.05, 0],
+                    color: "#FFFFFF"
+                });
+            }
+        }
+
+        // Procura por IMG
+        if (html_content.includes('<img')) {
+            const match = html_content.match(/src=["'](.*?)["']/);
+            if (match) {
+                commands.push({
+                    type: "Image",
+                    url: match[1],
+                    size: [0.8, 0, 0.5, 0],
+                    pos: [0.1, 0, 0.3, 0]
+                });
+            }
+        }
+
+        // Fundo (Background)
+        commands.push({
+            type: "Rect",
+            color: "#121212",
+            size: [1, 0, 1, 0],
+            pos: [0, 0, 0, 0],
+            zIndex: 0
         });
 
-        // Convertendo a imagem real em pixels (RGBA) para o Roblox
-        // (Nota: Para simplificar e evitar o erro de pixels, vamos focar no envio da URL se possível, 
-        // mas se quiser pixels, o buffer 'image' contém tudo o que o HTML gerou visualmente)
-        
-        res.json({ 
-            success: true, 
-            status: "HTML Renderizado como Imagem no Servidor"
-        });
+        res.json({ success: true, commands: commands });
     } catch (err) {
-        res.status(500).send(err.message);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0');
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`API Rodando na porta ${PORT}`);
+});
